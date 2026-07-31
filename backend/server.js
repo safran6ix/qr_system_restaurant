@@ -37,3 +37,29 @@ const orderRoutes = require('./src/routes/orderRoutes');
 const menuRoutes = require('./src/routes/menuRoutes')
 const tableRoutes = require('./src/routes/tableRoutes');
 
+//Use routes
+app.use('/api/orders', orderRoutes);
+app.use('/api/menu', menuRoutes);
+app.use('/api/tables', tableRoutes);
+
+//WebSocket handling
+io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+
+    socket.on('new-order', (orderData) => {
+        io.emit('order-received', orderData);
+    });
+
+    socket.on('order-accepted', (orderId) => {
+        io.emit('order-status-updated', { orderId, status: 'accepted'});
+    });
+    
+    socket.on('order-ready', (orderId) => {
+        io.emit('order-status-updated', { orderId, status: 'ready' });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('client disconnected:', socket.id);
+    });
+});
+
