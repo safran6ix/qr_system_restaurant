@@ -67,5 +67,25 @@ exports.createOrder = async (req, res) => {
         table.currentOrder = order._id;
         table.occupiedSince = new Date();
         await table.save();
+
+        //Emit socket event for new order
+        const io = req.app.get('io');
+        io.emit('new-order', order);
+
+        //Cache order in Redis for real-time updates
+        await redisClient.set(`order:${order._id}`, JSON.stringify(order), {
+            EX: 3600 //1 hour
+        });
+
+        res.status(201).json({
+            success: true,
+            data: order
+        });
+    } catch (error) {
+        console.error('Create order error:', error);
+        res.status(500).json({
+            success:  false,
+            message: 'Failed to create oder'
+        });
     }
-}
+};
