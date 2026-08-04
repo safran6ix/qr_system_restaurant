@@ -121,3 +121,46 @@ exports.getOrders = async (req, res) => {
         });
     }
 };
+
+exports.updateOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const order = await Order.findById(id);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        order.status = status;
+
+        // Update timestamps based on status
+        if (status === 'received') {
+            order.acceptedTime = new Date();
+        } else if (status === 'ready') {
+            order.readyTime = new Date();
+        } else if (status === 'served') {
+            order.servedTime = new Date();
+        }
+
+        await order.save();
+
+        // Emit socket event for status update
+        const io = req.app.get('io');
+        io.emit('order-status-updated', order);
+
+        res.status(200).json({
+            success: true,
+            data: order
+        });
+    } catch (error) {
+        console.error('Update order error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update order'
+        });
+    }
+};
