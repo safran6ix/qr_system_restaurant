@@ -89,3 +89,35 @@ exports.createOrder = async (req, res) => {
         });
     }
 };
+
+exports.getOrders = async (req, res) => {
+    try {
+        const { status, tableNumber, date } = req.query;
+        const query = {};
+
+        if (status) query.status = status;
+        if (tableNumber) query.tableNumber = tableNumber;
+        if (date) {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setHours(23, 59, 59, 999);
+            query.createdAt = { $gte: startDate, $lte: endDate };
+        }
+
+        const orders = await Order.find(query)
+            .sort({ createdAt: -1 })
+            .populate('items.menuItemId');
+
+        res.status(200).json({
+            success: true,
+            count: orders.length,
+            data: orders
+        });
+    } catch (error) {
+        console.error('Get orders error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch orders'
+        });
+    }
+};
